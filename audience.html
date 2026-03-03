@@ -14,6 +14,7 @@
 <body>
 <div class="container">
 
+<!-- القوانين -->
 <div class="card" id="rulesCard">
 <h2>📜 قوانين مسابقة الجمهور</h2>
 <ul style="line-height:2">
@@ -22,30 +23,28 @@
 <li>❌ يمنع إنشاء أكثر من حساب</li>
 <li>⚠️ أي مخالفة تلغي المشاركة فورًا</li>
 </ul>
-<button id="acceptBtn">أوافق على الشروط</button></div>
+<button id="acceptBtn">أوافق على الشروط</button>
+</div>
 
+<!-- تسجيل الدخول -->
 <div class="card" id="authCard" style="display:none">
 <h2>👤 تسجيل / دخول</h2>
-
 <input id="username" placeholder="اسم المستخدم" />
 <input id="password" type="password" placeholder="كلمة المرور" />
 
 <div style="margin-top:15px;">
-<button onclick="register()">إنشاء حساب</button>
-<button onclick="login()">تسجيل دخول</button>
+<button id="registerBtn">إنشاء حساب</button>
+<button id="loginBtn">تسجيل دخول</button>
 </div>
 
 <p id="authMsg" style="margin-top:10px;color:red;"></p>
 </div>
 
-<div class="card" id="welcomeCard" style="display:none">
+<!-- صفحة اللعب -->
+<div class="card" id="gameCard" style="display:none">
 <h2>🎯 مسابقة الجمهور</h2>
 
-<div id="audienceGame" style="display:none">
-
-<div style="font-size:18px;margin-bottom:10px;">
-<span id="audMatch"></span>
-</div>
+<div id="gameArea" style="display:none">
 
 <div style="font-size:20px;margin-bottom:10px;">
 سؤال <span id="audQNum">—</span>
@@ -54,10 +53,10 @@
 <div style="font-size:40px;margin-bottom:15px;" id="audTimer">—</div>
 
 <div id="audAnswers" style="display:flex;gap:10px;justify-content:center;">
-<button onclick="chooseAnswer('A')" class="answerBtn">A</button>
-<button onclick="chooseAnswer('B')" class="answerBtn">B</button>
-<button onclick="chooseAnswer('C')" class="answerBtn">C</button>
-<button onclick="chooseAnswer('D')" class="answerBtn">D</button>
+<button data-letter="A" class="answerBtn">A</button>
+<button data-letter="B" class="answerBtn">B</button>
+<button data-letter="C" class="answerBtn">C</button>
+<button data-letter="D" class="answerBtn">D</button>
 </div>
 
 <p id="audMsg" style="margin-top:15px;"></p>
@@ -65,91 +64,106 @@
 </div>
 
 <p id="waitingMsg">انتظر بدء السؤال...</p>
-
 </div>
 
 </div>
 
 <script>
 (function(){
-if(!initFirebaseOrShowError()) return;
-const acceptBtn = document.getElementById("acceptBtn");
-if(acceptBtn){
-acceptBtn.addEventListener("click", function(){
-document.getElementById("rulesCard").style.display = "none";
-document.getElementById("authCard").style.display = "block";
-});
-}
-const PATH="contest_v1/audience";
-const usersRef = ref(PATH+"/users");
 
-window.acceptRules = function(){
+if(!initFirebaseOrShowError()) return;
+
+const PATH = "contest_v1/audience";
+const usersRef = ref(PATH + "/users");
+const answersRef = ref(PATH + "/answers");
+const stateRef = ref("contest_v1/state");
+
+let currentMatch = null;
+let currentQuestion = null;
+let answered = false;
+let timerInterval = null;
+let currentUser = null;
+
+/* =========================
+   الشروط
+========================= */
+document.getElementById("acceptBtn").addEventListener("click", function(){
 document.getElementById("rulesCard").style.display="none";
 document.getElementById("authCard").style.display="block";
-}
+});
 
-window.register = function(){
-const u = username.value.trim();
-const p = password.value.trim();
+/* =========================
+   تسجيل
+========================= */
+document.getElementById("registerBtn").addEventListener("click", function(){
+
+const u = document.getElementById("username").value.trim();
+const p = document.getElementById("password").value.trim();
+const msg = document.getElementById("authMsg");
 
 if(!u || !p){
-authMsg.textContent="يرجى تعبئة جميع الحقول";
+msg.textContent="يرجى تعبئة جميع الحقول";
 return;
 }
 
-usersRef.child(u).once("value", snap=>{
+usersRef.child(u).once("value").then(snap=>{
 if(snap.exists()){
-authMsg.textContent="اسم المستخدم موجود مسبقاً";
+msg.textContent="اسم المستخدم موجود مسبقاً";
 }else{
 usersRef.child(u).set({
 password: btoa(p),
 score: 0
 });
-localStorage.setItem("audienceUser",u);
-showWelcome();
+msg.style.color="green";
+msg.textContent="تم إنشاء الحساب. سجل دخول الآن.";
 }
 });
-}
 
-window.login = function(){
-const u = username.value.trim();
-const p = password.value.trim();
+});
 
-usersRef.child(u).once("value", snap=>{
+/* =========================
+   دخول
+========================= */
+document.getElementById("loginBtn").addEventListener("click", function(){
+
+const u = document.getElementById("username").value.trim();
+const p = document.getElementById("password").value.trim();
+const msg = document.getElementById("authMsg");
+
+usersRef.child(u).once("value").then(snap=>{
 if(!snap.exists()){
-authMsg.textContent="المستخدم غير موجود";
+msg.textContent="المستخدم غير موجود";
 return;
 }
 
 const data = snap.val();
+
 if(data.password !== btoa(p)){
-authMsg.textContent="كلمة المرور غير صحيحة";
+msg.textContent="كلمة المرور غير صحيحة";
 return;
 }
 
-localStorage.setItem("audienceUser",u);
-showWelcome();
-});
-}
+currentUser = u;
 
-function showWelcome(){
 document.getElementById("authCard").style.display="none";
-document.getElementById("welcomeCard").style.display="block";
-}
+document.getElementById("gameCard").style.display="block";
+msg.textContent="";
+});
 
+});
 
-let stateRef = ref("contest_v1/state");
-let answersRef = ref("contest_v1/audience/answers");
-
-let currentMatch = null;
-let currentQuestion = null;
-let answered = false;
-
+/* =========================
+   متابعة حالة السؤال
+========================= */
 stateRef.on("value", snap=>{
+
 const state = snap.val() || {};
 
+if(!currentUser) return;
+
 if(!state.matchId || state.qIndex == null || state.qIndex < 0){
-document.getElementById("audienceGame").style.display="none";
+
+document.getElementById("gameArea").style.display="none";
 document.getElementById("waitingMsg").style.display="block";
 return;
 }
@@ -157,56 +171,65 @@ return;
 currentMatch = state.matchId;
 currentQuestion = String(state.qIndex);
 
-document.getElementById("audienceGame").style.display="block";
+document.getElementById("gameArea").style.display="block";
 document.getElementById("waitingMsg").style.display="none";
-
-
 document.getElementById("audQNum").textContent = state.qIndex + 1;
+
+answered = false;
+enableButtons();
+document.getElementById("audMsg").textContent="";
+
+/* ===== عداد ===== */
+
+if(timerInterval) clearInterval(timerInterval);
 
 if(state.timerEnd){
 
-const interval = setInterval(()=>{
-const left = Math.max(0, Math.ceil((state.timerEnd-Date.now())/1000));
+timerInterval = setInterval(()=>{
+
+const left = Math.max(0, Math.ceil((state.timerEnd - Date.now())/1000));
 document.getElementById("audTimer").textContent = left;
 
 if(left <= 0){
-clearInterval(interval);
+clearInterval(timerInterval);
 disableButtons();
 }
+
 },1000);
 
 }else{
-document.getElementById("audTimer").textContent = "—";
-}
-if(left === 0){
-disableButtons();
-}
-}else{
-document.getElementById("audTimer").textContent = "—";
+document.getElementById("audTimer").textContent="—";
 }
 
-answered = false;
-document.getElementById("audMsg").textContent="";
-enableButtons();
 });
 
-window.chooseAnswer = function(letter){
+/* =========================
+   اختيار إجابة
+========================= */
+document.querySelectorAll("#audAnswers button").forEach(btn=>{
+btn.addEventListener("click", function(){
 
 if(answered) return;
+if(!currentUser) return;
 
-if(!user) return;
+const letter = this.dataset.letter;
 
 answersRef
 .child(currentMatch)
 .child(currentQuestion)
-.child(user)
+.child(currentUser)
 .set(letter);
 
 answered = true;
-document.getElementById("audMsg").textContent="تم تسجيل إجابتك ✔";
 disableButtons();
-}
+document.getElementById("audMsg").textContent="تم تسجيل إجابتك ✔";
 
+});
+});
+
+/* =========================
+   أدوات
+========================= */
 function disableButtons(){
 document.querySelectorAll("#audAnswers button").forEach(b=>b.disabled=true);
 }
@@ -217,11 +240,6 @@ document.querySelectorAll("#audAnswers button").forEach(b=>b.disabled=false);
 
 })();
 </script>
-<script>
-function acceptRules(){
-document.getElementById("rulesCard").style.display="none";
-document.getElementById("authCard").style.display="block";
-}
-</script>
+
 </body>
 </html>
