@@ -54,6 +54,7 @@
     <div class="card" style="grid-column: span 12;">
 <h2>الترتيب</h2>
 <div id="liveStandings"></div>
+      <div id="audienceTop5" style="margin-top:30px;"></div>
       </div>
     </div>
   </div>
@@ -71,7 +72,73 @@
   const stateRef=ref(PATH+"/state");
   const resultsRef=ref(PATH+"/matchResults");
   const subsRef=ref(PATH+"/submissions");
+/* =========================
+   عرض أفضل 5 جمهور
+========================= */
 
+const audienceUsersRef = ref("contest_v1/audience/users");
+const resultsRef = ref("contest_v1/matchResults");
+
+function renderTop5(){
+
+audienceUsersRef.once("value").then(snap=>{
+
+if(!snap.exists()) return;
+
+const users = snap.val();
+
+const sorted = Object.keys(users)
+.map(u => ({
+name: u,
+score: users[u].score || 0
+}))
+.sort((a,b)=> b.score - a.score)
+.slice(0,5);
+
+let html = `
+<div style="background:#111;padding:20px;border-radius:15px;">
+<h2 style="color:gold;margin-bottom:15px;">🏆 أفضل 5 من الجمهور</h2>
+`;
+
+sorted.forEach((u,i)=>{
+html += `
+<div style="
+font-size:22px;
+margin:8px 0;
+color:white;
+display:flex;
+justify-content:space-between;
+">
+<span>#${i+1} - ${u.name}</span>
+<span>${u.score} نقطة</span>
+</div>
+`;
+});
+
+html += `</div>`;
+
+document.getElementById("audienceTop5").innerHTML = html;
+
+});
+
+}
+
+/* يظهر الترتيب بعد نزول نتيجة السؤال */
+
+resultsRef.on("value", snap=>{
+if(snap.exists()){
+renderTop5();
+}
+});
+
+/* يخفي الترتيب عند بدء سؤال جديد */
+
+stateRef.on("value", snap=>{
+const state = snap.val();
+if(state && state.qIndex >= 0){
+document.getElementById("audienceTop5").innerHTML = "";
+}
+});
 
   let teams={}, matches={}, state={};
   let lastQuestionText = "";
