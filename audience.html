@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مسابقة الجمهور</title>
+<link rel="stylesheet" href="style.css"/>
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+</head>
+
+<body>
+<div class="container">
+
+<div class="card" id="rulesCard">
+<h2>📜 قوانين مسابقة الجمهور</h2>
+<ul style="line-height:2">
+<li>❌ يمنع استخدام Google أو أي وسيلة بحث</li>
+<li>❌ يمنع مساعدة الفرق أو مشاركة الإجابات</li>
+<li>❌ يمنع إنشاء أكثر من حساب</li>
+<li>⚠️ أي مخالفة تلغي المشاركة فورًا</li>
+</ul>
+<button onclick="acceptRules()">أوافق على الشروط</button>
+</div>
+
+<div class="card" id="authCard" style="display:none">
+<h2>👤 تسجيل / دخول</h2>
+
+<input id="username" placeholder="اسم المستخدم" />
+<input id="password" type="password" placeholder="كلمة المرور" />
+
+<div style="margin-top:15px;">
+<button onclick="register()">إنشاء حساب</button>
+<button onclick="login()">تسجيل دخول</button>
+</div>
+
+<p id="authMsg" style="margin-top:10px;color:red;"></p>
+</div>
+
+<div class="card" id="welcomeCard" style="display:none">
+<h2>🎉 مرحباً بك في المسابقة</h2>
+<p>تم تسجيل دخولك بنجاح.</p>
+<p>انتظر بدء السؤال في شاشة العرض.</p>
+</div>
+
+</div>
+
+<script>
+(function(){
+if(!initFirebaseOrShowError()) return;
+
+const PATH="contest_v1/audience";
+const usersRef = ref(PATH+"/users");
+
+window.acceptRules = function(){
+document.getElementById("rulesCard").style.display="none";
+document.getElementById("authCard").style.display="block";
+}
+
+window.register = function(){
+const u = username.value.trim();
+const p = password.value.trim();
+
+if(!u || !p){
+authMsg.textContent="يرجى تعبئة جميع الحقول";
+return;
+}
+
+usersRef.child(u).once("value", snap=>{
+if(snap.exists()){
+authMsg.textContent="اسم المستخدم موجود مسبقاً";
+}else{
+usersRef.child(u).set({
+password: btoa(p),
+score: 0
+});
+localStorage.setItem("audienceUser",u);
+showWelcome();
+}
+});
+}
+
+window.login = function(){
+const u = username.value.trim();
+const p = password.value.trim();
+
+usersRef.child(u).once("value", snap=>{
+if(!snap.exists()){
+authMsg.textContent="المستخدم غير موجود";
+return;
+}
+
+const data = snap.val();
+if(data.password !== btoa(p)){
+authMsg.textContent="كلمة المرور غير صحيحة";
+return;
+}
+
+localStorage.setItem("audienceUser",u);
+showWelcome();
+});
+}
+
+function showWelcome(){
+document.getElementById("authCard").style.display="none";
+document.getElementById("welcomeCard").style.display="block";
+}
+
+const savedUser = localStorage.getItem("audienceUser");
+if(savedUser){
+document.getElementById("rulesCard").style.display="none";
+showWelcome();
+}
+
+})();
+</script>
+
+</body>
+</html>
