@@ -77,7 +77,54 @@ const PATH = "contest_v1/audience";
 const usersRef = ref(PATH + "/users");
 const answersRef = ref(PATH + "/answers");
 const stateRef = ref("contest_v1/state");
+/* =========================
+   احتساب نقاط الجمهور
+========================= */
 
+const resultsRef = ref("contest_v1/matchResults");
+
+resultsRef.on("value", snap=>{
+
+const results = snap.val();
+if(!results) return;
+
+Object.keys(results).forEach(matchId=>{
+
+Object.keys(results[matchId]).forEach(qIndex=>{
+
+const correctIndex = results[matchId][qIndex].correctIndex;
+if(correctIndex == null) return;
+
+const correctLetter = ["A","B","C","D"][correctIndex];
+
+answersRef
+.child(matchId)
+.child(qIndex)
+.once("value")
+.then(ansSnap=>{
+
+if(!ansSnap.exists()) return;
+
+const answers = ansSnap.val();
+
+Object.keys(answers).forEach(username=>{
+
+if(answers[username] === correctLetter){
+
+usersRef.child(username).child("score")
+.transaction(current => (current || 0) + 1);
+
+}
+
+});
+
+});
+
+});
+
+});
+
+});
 let currentMatch = null;
 let currentQuestion = null;
 let answered = false;
