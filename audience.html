@@ -22,8 +22,7 @@
 <li>❌ يمنع إنشاء أكثر من حساب</li>
 <li>⚠️ أي مخالفة تلغي المشاركة فورًا</li>
 </ul>
-<button onclick="acceptRules()">أوافق على الشروط</button>
-</div>
+<button id="acceptBtn">أوافق على الشروط</button></div>
 
 <div class="card" id="authCard" style="display:none">
 <h2>👤 تسجيل / دخول</h2>
@@ -74,7 +73,13 @@
 <script>
 (function(){
 if(!initFirebaseOrShowError()) return;
-
+const acceptBtn = document.getElementById("acceptBtn");
+if(acceptBtn){
+acceptBtn.addEventListener("click", function(){
+document.getElementById("rulesCard").style.display = "none";
+document.getElementById("authCard").style.display = "block";
+});
+}
 const PATH="contest_v1/audience";
 const usersRef = ref(PATH+"/users");
 
