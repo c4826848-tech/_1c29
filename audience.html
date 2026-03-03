@@ -132,11 +132,7 @@ document.getElementById("authCard").style.display="none";
 document.getElementById("welcomeCard").style.display="block";
 }
 
-const savedUser = localStorage.getItem("audienceUser");
-if(savedUser){
-document.getElementById("rulesCard").style.display="none";
-showWelcome();
-}
+
 let stateRef = ref("contest_v1/state");
 let answersRef = ref("contest_v1/audience/answers");
 
@@ -159,13 +155,24 @@ currentQuestion = String(state.qIndex);
 document.getElementById("audienceGame").style.display="block";
 document.getElementById("waitingMsg").style.display="none";
 
-document.getElementById("audMatch").textContent = state.matchId;
+
 document.getElementById("audQNum").textContent = state.qIndex + 1;
 
 if(state.timerEnd){
+
+const interval = setInterval(()=>{
 const left = Math.max(0, Math.ceil((state.timerEnd-Date.now())/1000));
 document.getElementById("audTimer").textContent = left;
 
+if(left <= 0){
+clearInterval(interval);
+disableButtons();
+}
+},1000);
+
+}else{
+document.getElementById("audTimer").textContent = "—";
+}
 if(left === 0){
 disableButtons();
 }
