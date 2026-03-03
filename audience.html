@@ -40,9 +40,33 @@
 </div>
 
 <div class="card" id="welcomeCard" style="display:none">
-<h2>🎉 مرحباً بك في المسابقة</h2>
-<p>تم تسجيل دخولك بنجاح.</p>
-<p>انتظر بدء السؤال في شاشة العرض.</p>
+<h2>🎯 مسابقة الجمهور</h2>
+
+<div id="audienceGame" style="display:none">
+
+<div style="font-size:18px;margin-bottom:10px;">
+<span id="audMatch"></span>
+</div>
+
+<div style="font-size:20px;margin-bottom:10px;">
+سؤال <span id="audQNum">—</span>
+</div>
+
+<div style="font-size:40px;margin-bottom:15px;" id="audTimer">—</div>
+
+<div id="audAnswers" style="display:flex;gap:10px;justify-content:center;">
+<button onclick="chooseAnswer('A')" class="answerBtn">A</button>
+<button onclick="chooseAnswer('B')" class="answerBtn">B</button>
+<button onclick="chooseAnswer('C')" class="answerBtn">C</button>
+<button onclick="chooseAnswer('D')" class="answerBtn">D</button>
+</div>
+
+<p id="audMsg" style="margin-top:15px;"></p>
+
+</div>
+
+<p id="waitingMsg">انتظر بدء السؤال...</p>
+
 </div>
 
 </div>
