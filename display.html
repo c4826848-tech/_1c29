@@ -38,9 +38,12 @@
 
     <div class="card center" style="grid-column: span 4;">
       <div class="small">الوقت المتبقي</div>
-      <div class="timer" id="timer">—</div>
+     <div class="timer" id="timer">—</div>
+      <div style="display:flex; justify-content:space-between; margin-top:15px; font-size:28px; font-weight:bold;">
+  <div id="liveScoreA">0</div>
+  <div id="liveScoreB">0</div>
+</div>
     </div>
-
     <div class="card" style="grid-column: span 8;">
       <div class="question" id="qText">انتظار بدء المباراة…</div>
       <div class="answers" id="answers"></div>
@@ -49,10 +52,8 @@
     </div>
 
     <div class="card" style="grid-column: span 12;">
-      <h2>الترتيب</h2>
-      <div class="grid">
-        <div class="card" style="grid-column: span 6;"><h2>المجموعة A</h2><div id="groupA"></div></div>
-        <div class="card" style="grid-column: span 6;"><h2>المجموعة B</h2><div id="groupB"></div></div>
+<h2>الترتيب</h2>
+<div id="liveStandings"></div>
       </div>
     </div>
   </div>
@@ -71,9 +72,16 @@
   const resultsRef=ref(PATH+"/matchResults");
   const subsRef=ref(PATH+"/submissions");
 
+
   let teams={}, matches={}, state={};
+  let lastQuestionText = "";
   let lastSubKeys = new Set(); // لمنع تكرار الصوت
   let currentResult = null;
+  let submittedTeams = new Set();
+  teamsRef.on("value", s=>{
+  teams = s.val() || {};
+  render();
+});
 
   function ding(){
     try{
@@ -101,13 +109,15 @@
   }
 
 
-  function title(){
-    if(!state.matchId) return "—";
-    const m=matches[state.matchId];
-    if(!m) return state.matchId;
-    return `${teams[m.teamA]?.name||m.teamA} ضد ${teams[m.teamB]?.name||m.teamB} (مجموعة ${m.group})`;
-  }
+function title(){
+  const m = matches[state.matchId];
+  if(!m) return "";
 
+  const teamA = teams[m.teamA]?.name || m.teamA;
+  const teamB = teams[m.teamB]?.name || m.teamB;
+
+  return `${teamA} ضد ${teamB}`;
+}
   function renderStandings(){
     const group=(g)=>Object.values(teams).filter(t=>t.group===g).sort((a,b)=>(b.points||0)-(a.points||0));
     const render=(list)=>{
@@ -122,13 +132,50 @@
   function render(){
     setBadge("live", state.phase==="live"?"مباشر 🔴":"انتظار", state.phase==="live"?"red":"");
     el("match").textContent=title();
+    const m = matches[state.matchId];
+    if(state.qIndex < 0){
+  submittedTeams.clear();
+}
+if(m){
+  const teamA = teams[m.teamA];
+  const teamB = teams[m.teamB];
+
+  const box = document.getElementById("liveStandings");
+
+  box.innerHTML = `
+    <div class="${submittedTeams.has(m.teamA) ? 'submitted' : ''}" style="font-size:24px;margin:12px 0;font-weight:bold">
+      ${teamA?.name || m.teamA} — ${teamA?.points || 0} نقطة
+    </div>
+   <div class="${submittedTeams.has(m.teamB) ? 'submitted' : ''}" style="font-size:24px;margin:12px 0;font-weight:bold">
+      ${teamB?.name || m.teamB} — ${teamB?.points || 0} نقطة
+    </div>
+  `;
+
+  el("match").textContent += ` (${m.scoreA||0} - ${m.scoreB||0})`;
+}
     el("qNum").textContent = state.qIndex>=0 ? `سؤال ${state.qIndex+1} / ${MATCH_Q_COUNT}` : `سؤال — / ${MATCH_Q_COUNT}`;
 
     const left = state.timerEnd ? Math.max(0, Math.ceil((state.timerEnd-Date.now())/1000)) : null;
     el("timer").textContent = left===null ? "—" : left;
 
-    el("qText").textContent = state.question?.text || "انتظار بدء المباراة…";
-    const wrap=el("answers");
+const newText = state.question?.text || "انتظار بدء المباراة…";
+const qEl = el("qText");
+
+if(newText !== lastQuestionText){
+
+  qEl.style.opacity = "0";
+
+  setTimeout(()=>{
+    qEl.textContent = newText;
+    qEl.style.transition = "0.3s ease";
+    qEl.style.opacity = "1";
+  },150);
+
+  lastQuestionText = newText;
+
+}else{
+  qEl.textContent = newText;
+}   const wrap=el("answers");
     wrap.innerHTML="";
     (state.question?.answers||[]).forEach((a,i)=>{
       const b=document.createElement("button");
@@ -169,9 +216,10 @@
 
   }
 
-  teamsRef.on("value", s=>{teams=s.val()||{}; renderStandings(); render();});
-  matchesRef.on("value", s=>{matches=s.val()||{}; render();});
-
+matchesRef.on("value", s=>{
+  matches = s.val() || {};
+  render();
+});
   // استمع لنتيجة السؤال الحالي (تجي من لوحة المشرف بعد انتهاء الوقت)
   function attachResultListener(){
     currentResult = null;
@@ -215,6 +263,17 @@
 
   setInterval(()=>{ if(state.phase==="live") render(); }, 250);
 })();
+</script>
+<audio id="bellSound" src="bell.wav" preload="auto"></audio></body>
+<div class="designer-badge">
+  <a href="https://www.instagram.com/_1c29/" target="_blank">
+    <span>تصميم وبرمجة: <strong>علي العجمي</strong></span>
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M7.75 2C4.57 2 2 4.57 2 7.75v8.5C2 19.43 4.57 22 7.75 22h8.5C19.43 22 22 19.43 22 16.25v-8.5C22 4.57 19.43 2 16.25 2h-8.5zm0 2h8.5C18.01 4 20 5.99 20 7.75v8.5c0 1.76-1.99 3.75-3.75 3.75h-8.5C5.99 20 4 18.01 4 16.25v-8.5C4 5.99 5.99 4 7.75 4zm4.25 2.75A5.25 5.25 0 1 0 17.25 12 5.26 5.26 0 0 0 12 6.75zm0 2A3.25 3.25 0 1 1 8.75 12 3.25 3.25 0 0 1 12 8.75zm4.5-3.25a1.25 1.25 0 1 0 1.25 1.25A1.25 1.25 0 0 0 16.5 5.5z"/>
+    </svg>
+  </a>
+</div></body>
+</html>
 </script>
 </body>
 </html>
