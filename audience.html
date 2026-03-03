@@ -137,7 +137,72 @@ if(savedUser){
 document.getElementById("rulesCard").style.display="none";
 showWelcome();
 }
+let stateRef = ref("contest_v1/state");
+let answersRef = ref("contest_v1/audience/answers");
 
+let currentMatch = null;
+let currentQuestion = null;
+let answered = false;
+
+stateRef.on("value", snap=>{
+const state = snap.val() || {};
+
+if(!state.matchId || state.qIndex == null || state.qIndex < 0){
+document.getElementById("audienceGame").style.display="none";
+document.getElementById("waitingMsg").style.display="block";
+return;
+}
+
+currentMatch = state.matchId;
+currentQuestion = String(state.qIndex);
+
+document.getElementById("audienceGame").style.display="block";
+document.getElementById("waitingMsg").style.display="none";
+
+document.getElementById("audMatch").textContent = state.matchId;
+document.getElementById("audQNum").textContent = state.qIndex + 1;
+
+if(state.timerEnd){
+const left = Math.max(0, Math.ceil((state.timerEnd-Date.now())/1000));
+document.getElementById("audTimer").textContent = left;
+
+if(left === 0){
+disableButtons();
+}
+}else{
+document.getElementById("audTimer").textContent = "—";
+}
+
+answered = false;
+document.getElementById("audMsg").textContent="";
+enableButtons();
+});
+
+window.chooseAnswer = function(letter){
+
+if(answered) return;
+
+const user = localStorage.getItem("audienceUser");
+if(!user) return;
+
+answersRef
+.child(currentMatch)
+.child(currentQuestion)
+.child(user)
+.set(letter);
+
+answered = true;
+document.getElementById("audMsg").textContent="تم تسجيل إجابتك ✔";
+disableButtons();
+}
+
+function disableButtons(){
+document.querySelectorAll("#audAnswers button").forEach(b=>b.disabled=true);
+}
+
+function enableButtons(){
+document.querySelectorAll("#audAnswers button").forEach(b=>b.disabled=false);
+}
 })();
 </script>
 
