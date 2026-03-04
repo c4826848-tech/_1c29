@@ -12,8 +12,8 @@
 
 <script src="firebase-config.js"></script>
 <script src="app.js"></script>
-</head>
 
+</head>
 <body>
 
 <div class="container">
@@ -36,7 +36,6 @@
 
 <div class="grid">
 
-
 <div class="card" style="grid-column: span 12;">
 <div class="row" style="justify-content:space-between">
 
@@ -50,11 +49,8 @@
 
 
 <div class="card center" style="grid-column: span 4;">
-
 <div class="small">الوقت المتبقي</div>
-
 <div class="timer" id="timer">—</div>
-
 </div>
 
 
@@ -62,17 +58,13 @@
 <div class="card" style="grid-column: span 8;">
 
 <div class="question" id="qText">
-
 انتظار بدء المباراة…
-
 </div>
 
 <div class="answers" id="answers"></div>
 
 <div class="winnerBox" id="winner">
-
 النتيجة: —
-
 </div>
 
 </div>
@@ -80,33 +72,23 @@
 
 
 <div class="card" style="grid-column: span 12;">
-
 <h2>ترتيب الفرق</h2>
-
 <div id="liveStandings"></div>
-
 </div>
 
 
 
 <div class="card" style="grid-column: span 12;">
-
 <h2>🏆 الأوائل من الجمهور</h2>
-
 <div id="audienceTop5"></div>
-
 </div>
 
 
 
 </div>
-
-
 
 <div class="footer">
-
 ليالي رمضان الثقافية
-
 </div>
 
 </div>
@@ -122,24 +104,16 @@ if(!initFirebaseOrShowError()) return;
 const PATH="contest_v1";
 
 const teamsRef=ref(PATH+"/teams");
-
 const matchesRef=ref(PATH+"/matches");
-
 const stateRef=ref(PATH+"/state");
-
+const resultsRef=ref(PATH+"/matchResults");
 const audienceUsersRef=ref(PATH+"/audience/users");
+const subsRef=ref(PATH+"/submissions");
+
+let teams={},matches={},state={};
+let lastSubKeys=new Set();
 
 
-
-let teams={};
-
-let matches={};
-
-let state={};
-
-
-
-/* عرض أفضل 5 من الجمهور */
 
 function renderAudience(){
 
@@ -150,29 +124,19 @@ if(!snap.exists()) return;
 const users=snap.val();
 
 const sorted=Object.keys(users)
-
 .map(u=>({name:u,score:users[u].score||0}))
-
 .sort((a,b)=>b.score-a.score)
-
 .slice(0,5);
-
-
 
 let html="";
 
 sorted.forEach((u,i)=>{
 
 html+=`
-
-<div style="font-size:22px;margin:10px 0;display:flex;justify-content:space-between;">
-
+<div style="font-size:22px;margin:10px 0;display:flex;justify-content:space-between">
 <span>#${i+1} - ${u.name}</span>
-
 <span>${u.score}</span>
-
 </div>
-
 `;
 
 });
@@ -187,26 +151,21 @@ document.getElementById("audienceTop5").innerHTML=html;
 
 function renderTeams(){
 
-const m = matches[state.matchId];
-
+const m=matches[state.matchId];
 if(!m) return;
 
-const teamA = teams[m.teamA];
-const teamB = teams[m.teamB];
+const teamA=teams[m.teamA];
+const teamB=teams[m.teamB];
 
 let html="";
 
-html+=`
-<div style="font-size:28px;margin:12px 0;font-weight:bold">
-${teamA?.name || m.teamA} — ${teamA?.points || 0} نقطة
-</div>
-`;
+html+=`<div style="font-size:28px;margin:12px 0;font-weight:bold">
+${teamA?.name||m.teamA} — ${teamA?.points||0} نقطة
+</div>`;
 
-html+=`
-<div style="font-size:28px;margin:12px 0;font-weight:bold">
-${teamB?.name || m.teamB} — ${teamB?.points || 0} نقطة
-</div>
-`;
+html+=`<div style="font-size:28px;margin:12px 0;font-weight:bold">
+${teamB?.name||m.teamB} — ${teamB?.points||0} نقطة
+</div>`;
 
 document.getElementById("liveStandings").innerHTML=html;
 
@@ -214,49 +173,47 @@ document.getElementById("liveStandings").innerHTML=html;
 
 
 
-/* عرض السؤال */
-
 function renderQuestion(){
 
 const q=state.question;
-
 if(!q) return;
 
 document.getElementById("qText").textContent=q.text||"";
 
 const wrap=document.getElementById("answers");
-
 wrap.innerHTML="";
 
 (q.answers||[]).forEach((a,i)=>{
 
 const b=document.createElement("button");
-
 b.className="answerBtn";
-
 b.textContent=LETTERS[i]+" ) "+a;
-
 wrap.appendChild(b);
+
+});
+
 showCorrect();
-  function showCorrect(){
+
+}
+
+
+
+function showCorrect(){
 
 if(!state.matchId) return;
 
-if(state.qIndex==null) return;
+const qKey=String(state.qIndex);
 
-const qKey = String(state.qIndex);
-
-ref("contest_v1/matchResults/"+state.matchId+"/"+qKey)
+resultsRef.child(state.matchId).child(qKey)
 .once("value")
 .then(snap=>{
 
-const r = snap.val();
-
+const r=snap.val();
 if(!r) return;
 
-const correct = r.correctIndex;
+const correct=r.correctIndex;
 
-const btns = document.querySelectorAll(".answerBtn");
+const btns=document.querySelectorAll(".answerBtn");
 
 btns.forEach(b=>b.classList.remove("correct"));
 
@@ -264,31 +221,42 @@ if(btns[correct]){
 btns[correct].classList.add("correct");
 }
 
+showWinner(r);
+
 });
 
 }
-});
+
+
+
+function showWinner(r){
+
+const m=matches[state.matchId];
+if(!m) return;
+
+const aAward=r.teamA?.award||0;
+const bAward=r.teamB?.award||0;
+
+let fastest="—";
+
+if(aAward===2) fastest=teams[m.teamA]?.name||m.teamA;
+if(bAward===2) fastest=teams[m.teamB]?.name||m.teamB;
+
+document.getElementById("winner").textContent="الأسرع: "+fastest;
 
 }
 
 
-
-/* التايمر */
 
 function renderTimer(){
 
 if(!state.timerEnd){
-
 document.getElementById("timer").textContent="—";
-
 return;
-
 }
 
 const left=Math.max(0,
-
 Math.ceil((state.timerEnd-Date.now())/1000)
-
 );
 
 document.getElementById("timer").textContent=left;
@@ -297,140 +265,41 @@ document.getElementById("timer").textContent=left;
 
 
 
-/* اسم المباراة */
-
 function renderMatch(){
 
 const m=matches[state.matchId];
-
 if(!m) return;
 
 const teamA=teams[m.teamA]?.name||m.teamA;
-
 const teamB=teams[m.teamB]?.name||m.teamB;
 
 document.getElementById("match").textContent=
-
 teamA+" ضد "+teamB;
 
 }
 
 
 
-/* تحديث */
-
-function render(){function render(){
-
-renderMatch();
-
-renderQuestion();
-
-renderTimer();
-
-renderTeams();
-
-showResult();
-
-}
-
-function showResult(){
-
-if(!state.matchId) return;
-
-if(state.qIndex==null) return;
-
-const qKey = String(state.qIndex);
-
-ref("contest_v1/matchResults/"+state.matchId+"/"+qKey)
-.once("value")
-.then(snap=>{
-
-const r = snap.val();
-
-if(!r) return;
-
-const correct = r.correctIndex;
-
-const buttons = document.querySelectorAll(".answerBtn");
-
-if(buttons[correct]){
-buttons[correct].classList.add("correct");
-}
-
-});
-
-}
-
-/* listeners */
-
-teamsRef.on("value",snap=>{
-
-teams=snap.val()||{};
-
-renderTeams();
-
-});
-
-
-
-matchesRef.on("value",snap=>{
-
-matches=snap.val()||{};
-
-renderMatch();
-
-});
-
-
-
-stateRef.on("value",snap=>{
-
-state = snap.val() || {};
-
-document.getElementById("qNum").textContent =
-state.qIndex>=0 ? "سؤال "+(state.qIndex+1) : "سؤال —";
-
-renderMatch();
-renderQuestion();
-renderTeams();
-listenBell();
-});
-
-
-
-setInterval(renderTimer,500);
-
-
-const subsRef = ref(PATH+"/submissions");
-
-let lastSubKeys = new Set();
-
 function ding(){
 
 try{
 
-const ctx = new (window.AudioContext || window.webkitAudioContext)();
+const ctx=new (window.AudioContext||window.webkitAudioContext)();
 
-const o = ctx.createOscillator();
-
-const g = ctx.createGain();
-
-o.frequency.value = 880;
+const o=ctx.createOscillator();
+const g=ctx.createGain();
 
 o.type="triangle";
+o.frequency.value=880;
 
 o.connect(g);
-
 g.connect(ctx.destination);
 
-g.gain.setValueAtTime(0.001, ctx.currentTime);
-
-g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime+0.01);
-
-g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.3);
+g.gain.setValueAtTime(0.001,ctx.currentTime);
+g.gain.exponentialRampToValueAtTime(0.3,ctx.currentTime+0.01);
+g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.3);
 
 o.start();
-
 o.stop(ctx.currentTime+0.31);
 
 }catch(e){}
@@ -438,28 +307,24 @@ o.stop(ctx.currentTime+0.31);
 }
 
 
+
 function listenBell(){
 
 if(!state.matchId) return;
 
-if(state.qIndex==null) return;
+const qKey=String(state.qIndex);
 
-const qKey = String(state.qIndex);
+subsRef.child(state.matchId).child(qKey)
+.on("value",snap=>{
 
-subsRef.child(state.matchId).child(qKey).on("value",snap=>{
-
-const v = snap.val() || {};
-
-const keys = Object.keys(v);
+const v=snap.val()||{};
+const keys=Object.keys(v);
 
 keys.forEach(k=>{
 
 if(!lastSubKeys.has(k)){
-
 lastSubKeys.add(k);
-
 ding();
-
 }
 
 });
@@ -467,24 +332,53 @@ ding();
 });
 
 }
+
+
+
+teamsRef.on("value",s=>{
+teams=s.val()||{};
+renderTeams();
+});
+
+
+
+matchesRef.on("value",s=>{
+matches=s.val()||{};
+renderMatch();
+});
+
+
+
+stateRef.on("value",s=>{
+
+state=s.val()||{};
+
+document.getElementById("qNum").textContent=
+state.qIndex>=0?"سؤال "+(state.qIndex+1):"سؤال —";
+
+renderMatch();
+renderQuestion();
+renderTeams();
+renderAudience();
+listenBell();
+
+});
+
+
+
+setInterval(renderTimer,500);
+
 })();
-
 </script>
 
 
 
 <div class="designer-badge">
-
 <a href="https://www.instagram.com/_1c29/" target="_blank">
-
 تصميم وبرمجة: <strong>علي بن حيدر 🤎</strong>
-
 </a>
-
 </div>
 
 
-
 </body>
-
 </html>
