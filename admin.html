@@ -127,16 +127,14 @@
   const submissionsRef=ref(PATH+"/submissions");
   const matchQsRef=ref(PATH+"/matchQuestions");
   const matchResultsRef=ref(PATH+"/matchResults");
-const audienceAnswersRef = ref(PATH + "/audience/answers");
-const audienceUsersRef   = ref(PATH + "/audience/users");
-const audienceAwardedRef = ref(PATH + "/audience/awarded");
-  
+
   let localTeams = JSON.parse(JSON.stringify(window.DEFAULT_TEAMS||[]));
   let teams = {};
   let matches = {};
   let state = {};
   let currentSubs = {};
-let scoringLock = false; // يمنع تشغيل scoreQuestion أكثر من مرة في نفس الوقتlet scoringLock = false; // يمنع تشغيل scoreQuestion أكثر من مرة في نفس الوقت  function renderTeams(){
+
+  function renderTeams(){
     const wrap=el("teamsEditor");
     wrap.innerHTML="";
     localTeams.forEach((t,i)=>{
@@ -315,7 +313,6 @@ function buildGroupMatches(){
     const id=el("matchSelect").value;
     await submissionsRef.child(id).remove();
     await matchResultsRef.child(id).remove();
-    await ref(PATH + "/audience/awarded/" + id).remove();
     await matchesRef.child(id).update({scoreA:0, scoreB:0});
     await stateRef.update({matchId:id, phase:"loaded", qIndex:-1, timerEnd:0, question:null, correct:null, scoredQIndex:-1});
     // حمّل أسئلة المباراة (إن وجدت)
@@ -376,111 +373,68 @@ function buildGroupMatches(){
     el("lastSubs").innerHTML = `<div>${aTxt}</div><div>${bTxt}</div>`;
   }
 
-async function scoreQuestion(autoReason){
+  async function scoreQuestion(autoReason){
+    if(state.phase!=="live" || state.qIndex<0) return;
+    if(state.scoredQIndex === state.qIndex) return;
+    const m = matches[state.matchId];
+    if(!m) return;
 
-if(state.phase!=="live" || state.qIndex<0) return;
-if(state.scoredQIndex === state.qIndex) return;
+    // حسب طلبك: ننتظر انتهاء الوقت دائماً
+    const timeUp = Date.now() > (state.timerEnd||0);
+    if(!timeUp) return;
 
-const m = matches[state.matchId];
-if(!m) return;
+    const qKey = String(state.qIndex);
+    const subs = (currentSubs && currentSubs[qKey]) ? currentSubs[qKey] : {};
+    const a = subs[m.teamA] || null;
+    const b = subs[m.teamB] || null;
+    const correct = state.correct;
 
-const timeUp = Date.now() > (state.timerEnd||0);
-if(!timeUp) return;
+    const resA = {answered:!!a, answerIndex:a?.answerIndex, ms:a?.ms, correct: (a && a.answerIndex===correct), award:0};
+    const resB = {answered:!!b, answerIndex:b?.answerIndex, ms:b?.ms, correct: (b && b.answerIndex===correct), award:0};
 
-const qKey = String(state.qIndex);
+    const candidates = [
+      {side:"A", teamId:m.teamA, sub:a, correct:resA.correct},
+      {side:"B", teamId:m.teamB, sub:b, correct:resB.correct},
+    ].filter(x=>x.sub && x.correct)
+     .sort((x,y)=> (x.sub.ms||999999) - (y.sub.ms||999999));
 
-const subs = (currentSubs && currentSubs[qKey]) ? currentSubs[qKey] : {};
-const a = subs[m.teamA] || null;
-const b = subs[m.teamB] || null;
+    let updates = {};
+    let incScoreA=0, incScoreB=0;
 
-const correct = state.correct;
+    if(candidates.length === 1){
+      const t = candidates[0].teamId;
+      updates[`${PATH}/teams/${t}/points`] = (teams[t]?.points||0) + 2;
+      if(candidates[0].side==="A"){ resA.award=2; incScoreA=2; } else { resB.award=2; incScoreB=2; }
+    }else if(candidates.length === 2){
+      const first = candidates[0], second = candidates[1];
+      updates[`${PATH}/teams/${first.teamId}/points`] = (teams[first.teamId]?.points||0) + 2;
+      updates[`${PATH}/teams/${second.teamId}/points`] = (teams[second.teamId]?.points||0) + 1;
 
-const resA = {answered:!!a, answerIndex:a?.answerIndex, ms:a?.ms, correct:(a && a.answerIndex===correct), award:0};
-const resB = {answered:!!b, answerIndex:b?.answerIndex, ms:b?.ms, correct:(b && b.answerIndex===correct), award:0};
+      if(first.side==="A"){ resA.award=2; incScoreA+=2; } else { resB.award=2; incScoreB+=2; }
+      if(second.side==="A"){ resA.award=1; incScoreA+=1; } else { resB.award=1; incScoreB+=1; }
+    }
+    // إذا لا أحد جاوب صح => 0
 
-const candidates = [
-{side:"A", teamId:m.teamA, sub:a, correct:resA.correct},
-{side:"B", teamId:m.teamB, sub:b, correct:resB.correct}
-]
-.filter(x=>x.sub && x.correct)
-.sort((x,y)=> (x.sub.ms||999999)-(y.sub.ms||999999));
+    // تحديث نقاط المباراة (scoreA/scoreB) داخل match
+    updates[`${PATH}/matches/${m.id}/scoreA`] = (m.scoreA||0) + incScoreA;
+    updates[`${PATH}/matches/${m.id}/scoreB`] = (m.scoreB||0) + incScoreB;
 
-let updates = {};
-let incScoreA=0;
-let incScoreB=0;
+    // سجل نتيجة هذا السؤال
+    updates[`${PATH}/matchResults/${m.id}/${qKey}`] = {
+      at: firebase.database.ServerValue.TIMESTAMP,
+      qIndex: state.qIndex,
+      qText: state.question?.text || "",
+      correctIndex: correct,
+      teamA: resA,
+      teamB: resB
+    };
 
-if(candidates.length === 1){
+    // تعليم أن السؤال احتُسب
+    updates[`${PATH}/state/scoredQIndex`] = state.qIndex;
 
-const t = candidates[0].teamId;
-
-updates[`${PATH}/teams/${t}/points`] = (teams[t]?.points||0)+2;
-
-if(candidates[0].side==="A"){resA.award=2; incScoreA=2;}
-else{resB.award=2; incScoreB=2;}
-
-}
-
-else if(candidates.length === 2){
-
-const first=candidates[0];
-const second=candidates[1];
-
-updates[`${PATH}/teams/${first.teamId}/points`] = (teams[first.teamId]?.points||0)+2;
-updates[`${PATH}/teams/${second.teamId}/points`] = (teams[second.teamId]?.points||0)+1;
-
-if(first.side==="A"){resA.award=2; incScoreA+=2;}
-else{resB.award=2; incScoreB+=2;}
-
-if(second.side==="A"){resA.award=1; incScoreA+=1;}
-else{resB.award=1; incScoreB+=1;}
-
-}
-
-updates[`${PATH}/matches/${m.id}/scoreA`] = (m.scoreA||0)+incScoreA;
-updates[`${PATH}/matches/${m.id}/scoreB`] = (m.scoreB||0)+incScoreB;
-
-updates[`${PATH}/matchResults/${m.id}/${qKey}`] = {
-
-at: firebase.database.ServerValue.TIMESTAMP,
-qIndex: state.qIndex,
-qText: state.question?.text || "",
-correctIndex: correct,
-teamA: resA,
-teamB: resB
-
-};
-
-updates[`${PATH}/state/scoredQIndex`] = state.qIndex;
-
-await ref("/").update(updates);
-
-
-//
-// احتساب الجمهور (مرة واحدة فقط)
-//
-
-const audSnap = await audienceAnswersRef.child(m.id).child(qKey).get();
-const audAnswers = audSnap.val() || {};
-
-const correctLetter = LETTERS[correct];
-
-for(const user in audAnswers){
-
-if(String(audAnswers[user]).toUpperCase() !== correctLetter) continue;
-
-const already = await audienceAwardedRef.child(m.id).child(qKey).child(user).get();
-
-if(already.exists()) continue;
-
-await audienceAwardedRef.child(m.id).child(qKey).child(user).set(true);
-
-await audienceUsersRef.child(user).child("score").transaction(v => (v||0)+1);
-
-}
-
-setBadge("status","تم احتساب النقاط تلقائياً ✅","green");
-
-}
+    await ref("/").update(updates);
+    setBadge("status","تم احتساب النقاط تلقائياً ✅","green");
+  }
 
   async function endMatch(){
     if(!state.matchId) return;
@@ -559,6 +513,10 @@ setBadge("status","تم احتساب النقاط تلقائياً ✅","green")
       <path d="M7.75 2C4.57 2 2 4.57 2 7.75v8.5C2 19.43 4.57 22 7.75 22h8.5C19.43 22 22 19.43 22 16.25v-8.5C22 4.57 19.43 2 16.25 2h-8.5zm0 2h8.5C18.01 4 20 5.99 20 7.75v8.5c0 1.76-1.99 3.75-3.75 3.75h-8.5C5.99 20 4 18.01 4 16.25v-8.5C4 5.99 5.99 4 7.75 4zm4.25 2.75A5.25 5.25 0 1 0 17.25 12 5.26 5.26 0 0 0 12 6.75zm0 2A3.25 3.25 0 1 1 8.75 12 3.25 3.25 0 0 1 12 8.75zm4.5-3.25a1.25 1.25 0 1 0 1.25 1.25A1.25 1.25 0 0 0 16.5 5.5z"/>
     </svg>
   </a>
-</div>
+</div></body>
+</html>
+  }, 400);
+})();
+</script>
 </body>
 </html>
