@@ -32,8 +32,6 @@
 <span class="badge" id="live">انتظار</span>
 </div>
 
-
-
 <div class="grid">
 
 <div class="card" style="grid-column: span 12;">
@@ -46,14 +44,10 @@
 </div>
 </div>
 
-
-
 <div class="card center" style="grid-column: span 4;">
 <div class="small">الوقت المتبقي</div>
 <div class="timer" id="timer">—</div>
 </div>
-
-
 
 <div class="card" style="grid-column: span 8;">
 
@@ -69,21 +63,15 @@
 
 </div>
 
-
-
 <div class="card" style="grid-column: span 12;">
 <h2>ترتيب الفرق</h2>
 <div id="liveStandings"></div>
 </div>
 
-
-
 <div class="card" style="grid-column: span 12;">
 <h2>🏆 الأوائل من الجمهور</h2>
 <div id="audienceTop5"></div>
 </div>
-
-
 
 </div>
 
@@ -93,7 +81,7 @@
 
 </div>
 
-
+<audio id="bell" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_6cfa1c0d36.mp3"></audio>
 
 <script>
 
@@ -111,9 +99,15 @@ const audienceUsersRef=ref(PATH+"/audience/users");
 const subsRef=ref(PATH+"/submissions");
 
 let teams={},matches={},state={};
-let lastSubKeys=new Set();
 
+const bell=document.getElementById("bell");
 
+function playBell(){
+try{
+bell.currentTime=0;
+bell.play();
+}catch(e){}
+}
 
 function renderAudience(){
 
@@ -147,8 +141,6 @@ document.getElementById("audienceTop5").innerHTML=html;
 
 }
 
-
-
 function renderTeams(){
 
 const m=matches[state.matchId];
@@ -170,8 +162,6 @@ ${teamB?.name||m.teamB} — ${teamB?.points||0} نقطة
 document.getElementById("liveStandings").innerHTML=html;
 
 }
-
-
 
 function renderQuestion(){
 
@@ -195,8 +185,6 @@ wrap.appendChild(b);
 showCorrect();
 
 }
-
-
 
 function showCorrect(){
 
@@ -227,53 +215,43 @@ showWinner(r);
 
 }
 
-
-
 function showWinner(r){
 
-const m = matches[state.matchId];
+const m=matches[state.matchId];
 if(!m) return;
 
-const teamA = teams[m.teamA];
-const teamB = teams[m.teamB];
+const teamA=teams[m.teamA];
+const teamB=teams[m.teamB];
 
-const aAward = r.teamA?.award || 0;
-const bAward = r.teamB?.award || 0;
+const aAward=r.teamA?.award||0;
+const bAward=r.teamB?.award||0;
 
-let text = "";
+let text="";
 
 if(aAward===0 && bAward===0){
 
-text = "النتيجة: لا يوجد إجابة صحيحة";
+text=`النتيجة: <span style="color:red;font-weight:bold">لا يوجد إجابة</span>`;
+
+}else if(aAward===2 && bAward===0){
+
+text=`النتيجة: الأسرع <span style="color:green">(+2)</span> = ${teamA?.name||m.teamA}`;
+
+}else if(bAward===2 && aAward===0){
+
+text=`النتيجة: الأسرع <span style="color:green">(+2)</span> = ${teamB?.name||m.teamB}`;
+
+}else{
+
+let fastest=aAward===2?(teamA?.name||m.teamA):(teamB?.name||m.teamB);
+let second=aAward===1?(teamA?.name||m.teamA):(teamB?.name||m.teamB);
+
+text=`النتيجة: الأسرع <span style="color:green">(+2)</span> = ${fastest} • <span style="color:green">(+1)</span> = ${second}`;
 
 }
 
-else if(aAward===2 && bAward===0){
-
-text = `النتيجة: الأسرع (+2) = ${teamA?.name || m.teamA}`;
+document.getElementById("winner").innerHTML=text;
 
 }
-
-else if(bAward===2 && aAward===0){
-
-text = `النتيجة: الأسرع (+2) = ${teamB?.name || m.teamB}`;
-
-}
-
-else{
-
-let fastest = aAward===2 ? (teamA?.name || m.teamA) : (teamB?.name || m.teamB);
-let second  = aAward===1 ? (teamA?.name || m.teamA) : (teamB?.name || m.teamB);
-
-text = `النتيجة: الأسرع (+2) = ${fastest}  •  (+1) = ${second}`;
-
-}
-
-document.getElementById("winner").textContent = text;
-
-}
-
-
 
 function renderTimer(){
 
@@ -290,8 +268,6 @@ document.getElementById("timer").textContent=left;
 
 }
 
-
-
 function renderMatch(){
 
 const m=matches[state.matchId];
@@ -305,81 +281,31 @@ teamA+" ضد "+teamB;
 
 }
 
-
-
-function ding(){
-
-try{
-
-const ctx=new (window.AudioContext||window.webkitAudioContext)();
-
-const o=ctx.createOscillator();
-const g=ctx.createGain();
-
-o.type="triangle";
-o.frequency.value=880;
-
-o.connect(g);
-g.connect(ctx.destination);
-
-g.gain.setValueAtTime(0.001,ctx.currentTime);
-g.gain.exponentialRampToValueAtTime(0.3,ctx.currentTime+0.01);
-g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.3);
-
-o.start();
-o.stop(ctx.currentTime+0.31);
-
-}catch(e){}
-
-}
-
-
-
 function listenBell(){
 
 if(!state.matchId) return;
+if(state.qIndex==null) return;
 
-const qKey = String(state.qIndex);
+const qKey=String(state.qIndex);
 
-const path = subsRef.child(state.matchId).child(qKey);
+subsRef.child(state.matchId).child(qKey)
+.on("child_added",snap=>{
 
-path.off(); // يمنع تكرار المستمع
-
-lastSubKeys = new Set();
-
-path.on("value",snap=>{
-
-const v=snap.val()||{};
-const keys=Object.keys(v);
-
-keys.forEach(k=>{
-
-if(!lastSubKeys.has(k)){
-lastSubKeys.add(k);
-ding();
-}
-
-});
+playBell();
 
 });
 
 }
-
-
 
 teamsRef.on("value",s=>{
 teams=s.val()||{};
 renderTeams();
 });
 
-
-
 matchesRef.on("value",s=>{
 matches=s.val()||{};
 renderMatch();
 });
-
-
 
 stateRef.on("value",s=>{
 
@@ -396,21 +322,16 @@ listenBell();
 
 });
 
-
-
 setInterval(renderTimer,500);
 
 })();
 </script>
-
-
 
 <div class="designer-badge">
 <a href="https://www.instagram.com/_1c29/" target="_blank">
 تصميم وبرمجة: <strong>علي بن حيدر 🤎</strong>
 </a>
 </div>
-
 
 </body>
 </html>
