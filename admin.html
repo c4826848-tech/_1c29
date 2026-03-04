@@ -136,8 +136,7 @@ const audienceAwardedRef = ref(PATH + "/audience/awarded");
   let matches = {};
   let state = {};
   let currentSubs = {};
-
-  function renderTeams(){
+let scoringLock = false; // يمنع تشغيل scoreQuestion أكثر من مرة في نفس الوقتlet scoringLock = false; // يمنع تشغيل scoreQuestion أكثر من مرة في نفس الوقت  function renderTeams(){
     const wrap=el("teamsEditor");
     wrap.innerHTML="";
     localTeams.forEach((t,i)=>{
@@ -561,6 +560,5 @@ setBadge("status","تم احتساب النقاط تلقائياً ✅","green")
     </svg>
   </a>
 </div>
-
 </body>
 </html>
