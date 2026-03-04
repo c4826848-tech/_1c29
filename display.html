@@ -111,7 +111,7 @@ bell.play();
 
 function renderAudience(){
 
-audienceUsersRef.on("value").then(snap=>{
+audienceUsersRef.on("value",snap=>{
 
 if(!snap.exists()) return;
 
@@ -140,7 +140,6 @@ document.getElementById("audienceTop5").innerHTML=html;
 });
 
 }
-
 function renderTeams(){
 
 const m=matches[state.matchId];
