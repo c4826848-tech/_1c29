@@ -231,18 +231,45 @@ showWinner(r);
 
 function showWinner(r){
 
-const m=matches[state.matchId];
+const m = matches[state.matchId];
 if(!m) return;
 
-const aAward=r.teamA?.award||0;
-const bAward=r.teamB?.award||0;
+const teamA = teams[m.teamA];
+const teamB = teams[m.teamB];
 
-let fastest="—";
+const aAward = r.teamA?.award || 0;
+const bAward = r.teamB?.award || 0;
 
-if(aAward===2) fastest=teams[m.teamA]?.name||m.teamA;
-if(bAward===2) fastest=teams[m.teamB]?.name||m.teamB;
+let text = "";
 
-document.getElementById("winner").textContent="الأسرع: "+fastest;
+if(aAward===0 && bAward===0){
+
+text = "النتيجة: لا يوجد إجابة صحيحة";
+
+}
+
+else if(aAward===2 && bAward===0){
+
+text = `النتيجة: الأسرع (+2) = ${teamA?.name || m.teamA}`;
+
+}
+
+else if(bAward===2 && aAward===0){
+
+text = `النتيجة: الأسرع (+2) = ${teamB?.name || m.teamB}`;
+
+}
+
+else{
+
+let fastest = aAward===2 ? (teamA?.name || m.teamA) : (teamB?.name || m.teamB);
+let second  = aAward===1 ? (teamA?.name || m.teamA) : (teamB?.name || m.teamB);
+
+text = `النتيجة: الأسرع (+2) = ${fastest}  •  (+1) = ${second}`;
+
+}
+
+document.getElementById("winner").textContent = text;
 
 }
 
