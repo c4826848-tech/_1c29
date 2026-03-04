@@ -185,25 +185,28 @@ document.getElementById("audienceTop5").innerHTML=html;
 
 
 
-/* ترتيب الفرق */
-
 function renderTeams(){
+
+const m = matches[state.matchId];
+
+if(!m) return;
+
+const teamA = teams[m.teamA];
+const teamB = teams[m.teamB];
 
 let html="";
 
-Object.values(teams).forEach(t=>{
-
 html+=`
-
-<div style="font-size:24px;margin:10px 0;font-weight:bold">
-
-${t.name} — ${t.points || 0} نقطة
-
+<div style="font-size:28px;margin:12px 0;font-weight:bold">
+${teamA?.name || m.teamA} — ${teamA?.points || 0} نقطة
 </div>
-
 `;
 
-});
+html+=`
+<div style="font-size:28px;margin:12px 0;font-weight:bold">
+${teamB?.name || m.teamB} — ${teamB?.points || 0} نقطة
+</div>
+`;
 
 document.getElementById("liveStandings").innerHTML=html;
 
@@ -287,7 +290,7 @@ teamA+" ضد "+teamB;
 
 /* تحديث */
 
-function render(){
+function render(){function render(){
 
 renderMatch();
 
@@ -297,9 +300,37 @@ renderTimer();
 
 renderTeams();
 
+showResult();
+
 }
 
+function showResult(){
 
+if(!state.matchId) return;
+
+if(state.qIndex==null) return;
+
+const qKey = String(state.qIndex);
+
+ref("contest_v1/matchResults/"+state.matchId+"/"+qKey)
+.once("value")
+.then(snap=>{
+
+const r = snap.val();
+
+if(!r) return;
+
+const correct = r.correctIndex;
+
+const buttons = document.querySelectorAll(".answerBtn");
+
+if(buttons[correct]){
+buttons[correct].classList.add("correct");
+}
+
+});
+
+}
 
 /* listeners */
 
