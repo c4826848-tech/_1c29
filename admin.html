@@ -133,7 +133,7 @@
   let matches = {};
   let state = {};
   let currentSubs = {};
-
+let scoringLock = false;
   function renderTeams(){
     const wrap=el("teamsEditor");
     wrap.innerHTML="";
@@ -374,8 +374,12 @@ function buildGroupMatches(){
   }
 
   async function scoreQuestion(autoReason){
+    
+    if(scoringLock) return;
+    
     if(state.phase!=="live" || state.qIndex<0) return;
     if(state.scoredQIndex === state.qIndex) return;
+    scoringLock = true;
     const m = matches[state.matchId];
     if(!m) return;
 
@@ -433,6 +437,7 @@ function buildGroupMatches(){
     updates[`${PATH}/state/scoredQIndex`] = state.qIndex;
 
     await ref("/").update(updates);
+    scoringLock = false;
     setBadge("status","تم احتساب النقاط تلقائياً ✅","green");
   }
 
