@@ -237,7 +237,36 @@ b.className="answerBtn";
 b.textContent=LETTERS[i]+" ) "+a;
 
 wrap.appendChild(b);
+showCorrect();
+  function showCorrect(){
 
+if(!state.matchId) return;
+
+if(state.qIndex==null) return;
+
+const qKey = String(state.qIndex);
+
+ref("contest_v1/matchResults/"+state.matchId+"/"+qKey)
+.once("value")
+.then(snap=>{
+
+const r = snap.val();
+
+if(!r) return;
+
+const correct = r.correctIndex;
+
+const btns = document.querySelectorAll(".answerBtn");
+
+btns.forEach(b=>b.classList.remove("correct"));
+
+if(btns[correct]){
+btns[correct].classList.add("correct");
+}
+
+});
+
+}
 });
 
 }
@@ -356,16 +385,15 @@ renderMatch();
 
 stateRef.on("value",snap=>{
 
-state=snap.val()||{};
+state = snap.val() || {};
 
-document.getElementById("qNum").textContent=
+document.getElementById("qNum").textContent =
+state.qIndex>=0 ? "سؤال "+(state.qIndex+1) : "سؤال —";
 
-state.qIndex>=0?"سؤال "+(state.qIndex+1):"سؤال —";
-
-render();
-
-renderAudience();
-
+renderMatch();
+renderQuestion();
+renderTeams();
+listenBell();
 });
 
 
@@ -373,7 +401,72 @@ renderAudience();
 setInterval(renderTimer,500);
 
 
+const subsRef = ref(PATH+"/submissions");
 
+let lastSubKeys = new Set();
+
+function ding(){
+
+try{
+
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+const o = ctx.createOscillator();
+
+const g = ctx.createGain();
+
+o.frequency.value = 880;
+
+o.type="triangle";
+
+o.connect(g);
+
+g.connect(ctx.destination);
+
+g.gain.setValueAtTime(0.001, ctx.currentTime);
+
+g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime+0.01);
+
+g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.3);
+
+o.start();
+
+o.stop(ctx.currentTime+0.31);
+
+}catch(e){}
+
+}
+
+
+function listenBell(){
+
+if(!state.matchId) return;
+
+if(state.qIndex==null) return;
+
+const qKey = String(state.qIndex);
+
+subsRef.child(state.matchId).child(qKey).on("value",snap=>{
+
+const v = snap.val() || {};
+
+const keys = Object.keys(v);
+
+keys.forEach(k=>{
+
+if(!lastSubKeys.has(k)){
+
+lastSubKeys.add(k);
+
+ding();
+
+}
+
+});
+
+});
+
+}
 })();
 
 </script>
