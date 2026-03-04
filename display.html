@@ -339,10 +339,15 @@ function listenBell(){
 
 if(!state.matchId) return;
 
-const qKey=String(state.qIndex);
+const qKey = String(state.qIndex);
 
-subsRef.child(state.matchId).child(qKey)
-.on("value",snap=>{
+const path = subsRef.child(state.matchId).child(qKey);
+
+path.off(); // يمنع تكرار المستمع
+
+lastSubKeys = new Set();
+
+path.on("value",snap=>{
 
 const v=snap.val()||{};
 const keys=Object.keys(v);
