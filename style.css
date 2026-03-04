@@ -149,3 +149,9 @@ input:focus,select:focus{border-color:#c7d2fe;box-shadow:0 0 0 4px rgba(79,70,22
   }
 
 }
+.audienceMini div{
+
+font-size:18px !important;
+margin:6px 0 !important;
+
+}
