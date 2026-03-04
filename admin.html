@@ -127,7 +127,10 @@
   const submissionsRef=ref(PATH+"/submissions");
   const matchQsRef=ref(PATH+"/matchQuestions");
   const matchResultsRef=ref(PATH+"/matchResults");
-
+const audienceAnswersRef = ref(PATH + "/audience/answers");
+const audienceUsersRef   = ref(PATH + "/audience/users");
+const audienceAwardedRef = ref(PATH + "/audience/awarded");
+  
   let localTeams = JSON.parse(JSON.stringify(window.DEFAULT_TEAMS||[]));
   let teams = {};
   let matches = {};
@@ -313,6 +316,7 @@ function buildGroupMatches(){
     const id=el("matchSelect").value;
     await submissionsRef.child(id).remove();
     await matchResultsRef.child(id).remove();
+    await ref(PATH + "/audience/awarded/" + id).remove();
     await matchesRef.child(id).update({scoreA:0, scoreB:0});
     await stateRef.update({matchId:id, phase:"loaded", qIndex:-1, timerEnd:0, question:null, correct:null, scoredQIndex:-1});
     // حمّل أسئلة المباراة (إن وجدت)
@@ -431,7 +435,38 @@ function buildGroupMatches(){
 
     // تعليم أن السؤال احتُسب
     updates[`${PATH}/state/scoredQIndex`] = state.qIndex;
+// ====== احتساب نقاط الجمهور (نقطة واحدة لكل سؤال لكل مستخدم) ======
+try {
+  const qKey = String(state.qIndex);
+  const matchId = m.id;
 
+  // إجابات الجمهور لهذا السؤال
+  const audSnap = await audienceAnswersRef.child(matchId).child(qKey).get();
+  const audAnswers = audSnap.val() || {};
+
+  // نجمع فقط اللي إجابتهم صحيحة
+  const correctLetter = LETTERS[correct]; // correct هو correctIndex
+  const usersToReward = Object.entries(audAnswers)
+    .filter(([user, letter]) => String(letter).toUpperCase() === String(correctLetter))
+    .map(([user]) => user);
+
+  // نكافئ كل واحد مرة واحدة فقط
+  await Promise.all(usersToReward.map(async (user) => {
+    const awardedPath = audienceAwardedRef.child(matchId).child(qKey).child(user);
+
+    const already = (await awardedPath.get()).val();
+    if (already) return; // أخذ نقطته مسبقاً
+
+    // ضع علامة أنه أخذ النقطة
+    await awardedPath.set(true);
+
+    // زِد سكور المستخدم +1 بطريقة transaction (آمنة لو صار تزامن)
+    await audienceUsersRef.child(user).child("score").transaction((v) => (v || 0) + 1);
+  }));
+} catch (e) {
+  console.warn("Audience scoring error:", e);
+}
+// ====== نهاية احتساب نقاط الجمهور ======
     await ref("/").update(updates);
     setBadge("status","تم احتساب النقاط تلقائياً ✅","green");
   }
