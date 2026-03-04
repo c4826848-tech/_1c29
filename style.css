@@ -161,3 +161,22 @@ font-size:18px !important;
 margin:6px 0 !important;
 
 }
+@keyframes designerGlow {
+
+0%{
+transform:translateX(-50%) scale(1);
+}
+
+50%{
+transform:translateX(-50%) scale(1.05);
+}
+
+100%{
+transform:translateX(-50%) scale(1);
+}
+
+}
+
+.designer-badge{
+animation: designerGlow 3s infinite;
+}
