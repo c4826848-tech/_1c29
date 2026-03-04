@@ -111,7 +111,7 @@ bell.play();
 
 function renderAudience(){
 
-audienceUsersRef.once("value").then(snap=>{
+audienceUsersRef.on("value").then(snap=>{
 
 if(!snap.exists()) return;
 
