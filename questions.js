@@ -149,13 +149,11 @@ function shuffleAnswers(q){
   const opts = q.a.map((text, i) => ({ text, i }));
   shuffle(opts);
   const newCorrect = opts.findIndex(x => x.i === q.c);
-
-  return {
-    question: q.q,
-    answers: opts.map(x => x.text),
-    correct: newCorrect
-  };
-}
+return {
+  question: q.q,
+  answers: opts.map(x => x.text),
+  correctIndex: newCorrect
+};
 
 function takeRandom(pool, count){
   const copy = [...pool];
