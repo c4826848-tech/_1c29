@@ -148,9 +148,14 @@ let html="";
 sorted.forEach((u,i)=>{
 
 html+=`
-<div style="font-size:22px;margin:10px 0;display:flex;justify-content:space-between">
-<span>#${i+1} - ${u.name}</span>
-<span>${u.score}</span>
+<div class="audience-item">
+
+<span class="audience-rank">#${i+1}</span>
+
+<span class="audience-name">${u.name}</span>
+
+<span class="audience-score">${u.score}</span>
+
 </div>
 `;
 
