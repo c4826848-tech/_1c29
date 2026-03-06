@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
 <title>شاشة العرض</title>
 
 <link rel="stylesheet" href="style.css"/>
@@ -14,12 +16,15 @@
 <script src="app.js"></script>
 
 </head>
+
 <body>
 
 <div class="container">
 
 <div class="topbar">
+
 <div class="brand">
+
 <div class="logo">📺</div>
 
 <div>
@@ -30,24 +35,36 @@
 </div>
 
 <span class="badge" id="live">انتظار</span>
+
 </div>
 
+
 <div class="grid">
+
+<!-- المباراة -->
 
 <div class="card" style="grid-column: span 12;">
 <div class="row" style="justify-content:space-between">
 
 <span class="badge green" id="match">—</span>
-
 <span class="badge" id="qNum">سؤال —</span>
 
 </div>
 </div>
 
+
+<!-- المؤقت -->
+
 <div class="card center" style="grid-column: span 4;">
+
 <div class="small">الوقت المتبقي</div>
+
 <div class="timer" id="timer">—</div>
+
 </div>
+
+
+<!-- السؤال -->
 
 <div class="card" style="grid-column: span 8;">
 
@@ -63,32 +80,36 @@
 
 </div>
 
-<div class="card" style="grid-column: span 6;">
-  <h2>👥 ترتيب الفرق</h2>
 
-  <div class="championship-logo">
-    <div class="logo-text">الثقافية</div>
-    <div class="logo-sub">بطولة أم حلوش الرمضانية</div>
-    <div class="logo-shine"></div>
-  </div>
-
-  <div id="liveStandings"></div>
-</div>
+<!-- ترتيب الفرق -->
 
 <div class="card" style="grid-column: span 6;">
-  <h2>🏆 الأوائل من الجمهور</h2>
-  <div id="audienceTop5" class="audienceMini"></div>
-</div>
+
+<h2>👥 ترتيب الفرق</h2>
+
 <div class="championship-logo">
 
+<div class="logo-text">الثقافية</div>
 
-    <div class="logo-shine"></div>
+<div class="logo-sub">بطولة أم حلوش الرمضانية</div>
 
-  </div>
+<div class="logo-shine"></div>
 
 </div>
 
+<div id="liveStandings"></div>
+
 </div>
+
+
+<!-- الجمهور -->
+
+<div class="card" style="grid-column: span 6;">
+
+<h2>🏆 الأوائل من الجمهور</h2>
+
+<div id="audienceTop5" class="audienceMini"></div>
+
 </div>
 
 </div>
@@ -99,7 +120,9 @@
 
 </div>
 
+
 <audio id="bell" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_6cfa1c0d36.mp3"></audio>
+
 
 <script>
 
@@ -126,6 +149,7 @@ bell.currentTime=0;
 bell.play();
 }catch(e){}
 }
+
 
 function renderAudience(){
 
@@ -163,6 +187,8 @@ document.getElementById("audienceTop5").innerHTML=html;
 });
 
 }
+
+
 function renderTeams(){
 
 const m=matches[state.matchId];
@@ -185,11 +211,14 @@ document.getElementById("liveStandings").innerHTML=html;
 
 }
 
+
 function renderQuestion(){
 
 const q=state.question;
 if(!q) return;
-document.getElementById("winner").textContent = "النتيجة: —";
+
+document.getElementById("winner").textContent="النتيجة: —";
+
 document.getElementById("qText").textContent=q.text||"";
 
 const wrap=document.getElementById("answers");
@@ -198,8 +227,11 @@ wrap.innerHTML="";
 (q.answers||[]).forEach((a,i)=>{
 
 const b=document.createElement("button");
+
 b.className="answerBtn";
+
 b.textContent=LETTERS[i]+" ) "+a;
+
 wrap.appendChild(b);
 
 });
@@ -207,6 +239,7 @@ wrap.appendChild(b);
 showCorrect();
 
 }
+
 
 function showCorrect(){
 
@@ -228,7 +261,9 @@ const btns=document.querySelectorAll(".answerBtn");
 btns.forEach(b=>b.classList.remove("correct"));
 
 if(btns[correct]){
+
 btns[correct].classList.add("correct");
+
 }
 
 showWinner(r);
@@ -236,6 +271,7 @@ showWinner(r);
 });
 
 }
+
 
 function showWinner(r){
 
@@ -275,20 +311,22 @@ document.getElementById("winner").innerHTML=text;
 
 }
 
+
 function renderTimer(){
 
 if(!state.timerEnd){
+
 document.getElementById("timer").textContent="—";
 return;
+
 }
 
-const left=Math.max(0,
-Math.ceil((state.timerEnd-Date.now())/1000)
-);
+const left=Math.max(0,Math.ceil((state.timerEnd-Date.now())/1000));
 
 document.getElementById("timer").textContent=left;
 
 }
+
 
 function renderMatch(){
 
@@ -298,10 +336,10 @@ if(!m) return;
 const teamA=teams[m.teamA]?.name||m.teamA;
 const teamB=teams[m.teamB]?.name||m.teamB;
 
-document.getElementById("match").textContent=
-teamA+" ضد "+teamB;
+document.getElementById("match").textContent=teamA+" ضد "+teamB;
 
 }
+
 
 function listenBell(){
 
@@ -319,15 +357,18 @@ playBell();
 
 }
 
+
 teamsRef.on("value",s=>{
 teams=s.val()||{};
 renderTeams();
 });
 
+
 matchesRef.on("value",s=>{
 matches=s.val()||{};
 renderMatch();
 });
+
 
 stateRef.on("value",s=>{
 
@@ -344,14 +385,22 @@ listenBell();
 
 });
 
+
 setInterval(renderTimer,500);
 
 })();
+
 </script>
 
+
 <div class="designer-badge">
+
 <a href="https://www.instagram.com/_1c29/" target="_blank">
-تصميم وبرمجة: <strong>عَلي بن حيدر🤎</strong></a>
+
+تصميم وبرمجة: <strong>عَلي بن حيدر🤎</strong>
+
+</a>
+
 </div>
 
 </body>
