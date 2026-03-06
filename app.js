@@ -29,3 +29,21 @@ const LETTERS = ["A","B","C","D"];
 
 function now(){return Date.now();}
 function clone(x){return JSON.parse(JSON.stringify(x));}
+// زر بدء المباراة (إصلاح)
+document.querySelectorAll("button").forEach(btn=>{
+  if(btn.textContent.includes("بدء مباراة")){
+    btn.onclick = function(){
+
+      const PATH = "contest_v1";
+
+      const stateRef = firebase.database().ref(PATH + "/state");
+
+      stateRef.update({
+        started: true,
+        qIndex: 0,
+        timerEnd: Date.now() + 20000
+      });
+
+    };
+  }
+});
