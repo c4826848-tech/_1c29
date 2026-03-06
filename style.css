@@ -199,3 +199,87 @@ transform:translateX(-50%) scale(1);
 .designer-badge{
 animation: designerGlow 3s infinite;
 }
+/* =========================
+   شعار البطولة المطور
+========================= */
+
+.championship-logo{
+  width:100%;
+  display:flex;
+  justify-content:center;
+  margin-top:35px;
+}
+
+.logo-box{
+  position:relative;
+  padding:20px 60px;
+  border:2px solid #d4af37;
+  border-radius:10px;
+  text-align:center;
+  overflow:hidden;
+  background:rgba(0,0,0,0.25);
+  backdrop-filter: blur(3px);
+}
+
+/* حركة خفيفة */
+
+.logo-box{
+  animation: logoFloat 5s ease-in-out infinite;
+}
+
+@keyframes logoFloat{
+  0%{transform:translateY(0px);}
+  50%{transform:translateY(-6px);}
+  100%{transform:translateY(0px);}
+}
+
+/* العنوان */
+
+.logo-main{
+  font-size:65px;
+  font-weight:bold;
+  color:#d4af37;
+  letter-spacing:3px;
+  text-shadow:
+    0 0 10px rgba(212,175,55,0.7),
+    0 0 25px rgba(212,175,55,0.5);
+}
+
+/* الخط الفاصل */
+
+.logo-divider{
+  height:2px;
+  background:linear-gradient(to right, transparent, #d4af37, transparent);
+  margin:10px 0;
+}
+
+/* النص السفلي */
+
+.logo-sub{
+  font-size:30px;
+  color:white;
+  letter-spacing:2px;
+}
+
+/* تأثير اللمعة */
+
+.logo-shine{
+  position:absolute;
+  top:0;
+  left:-100%;
+  width:100%;
+  height:100%;
+  background:linear-gradient(
+    120deg,
+    transparent,
+    rgba(255,255,255,0.6),
+    transparent
+  );
+  animation: shineMove 4s infinite;
+}
+
+@keyframes shineMove{
+  0%{left:-100%;}
+  50%{left:100%;}
+  100%{left:100%;}
+}
