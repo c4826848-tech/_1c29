@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+<meta charset="UTF-8">
+<title>التسجيل في البطولة</title>
+
+<link rel="stylesheet" href="style.css"/>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-database-compat.js"></script>
+
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1 style="text-align:center">
+التسجيل في بطولة أم حلوش الرمضانية
+</h1>
+
+<div class="card">
+
+<input id="name" placeholder="الاسم الكامل"/>
+
+<input id="phone" placeholder="رقم الهاتف"/>
+
+<input id="team" placeholder="اسم الفريق"/>
+
+<button onclick="register()">تسجيل</button>
+
+<div id="msg"></div>
+
+</div>
+
+</div>
+
+<script>
+
+const regRef = ref("contest_v1/registrations");
+
+function register(){
+
+const name = document.getElementById("name").value.trim();
+const phone = document.getElementById("phone").value.trim();
+const team = document.getElementById("team").value.trim();
+
+if(!name || !phone){
+
+document.getElementById("msg").innerText="يرجى تعبئة البيانات";
+
+return;
+
+}
+
+const id = Date.now();
+
+regRef.child(id).set({
+
+name,
+phone,
+team,
+time: Date.now()
+
+});
+
+document.getElementById("msg").innerText="تم التسجيل بنجاح";
+
+}
+
+</script>
+
+</body>
+</html>
