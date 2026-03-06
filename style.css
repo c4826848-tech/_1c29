@@ -176,7 +176,26 @@ transform:translateX(-50%) scale(1);
 }
 
 }
+/* شعار البطولة */
 
+.championship-logo{
+  width:100%;
+  text-align:center;
+  margin-top:35px;
+}
+
+.logo-main{
+  font-size:60px;
+  font-weight:bold;
+  color:#d4af37;
+  letter-spacing:3px;
+}
+
+.logo-sub{
+  font-size:28px;
+  color:white;
+  margin-top:6px;
+}
 .designer-badge{
 animation: designerGlow 3s infinite;
 }
