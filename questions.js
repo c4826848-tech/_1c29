@@ -210,3 +210,36 @@ function buildTournamentQuestions(matchCount = 15){
 
 // هذا هو المتغير الذي يستخدمه نظامك
 window.QUESTIONS = buildTournamentQuestions(15);
+function shuffle(arr){
+  for(let i = arr.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function shuffleAnswers(q){
+  const opts = q.a.map((text, i) => ({ text, i }));
+  shuffle(opts);
+  const newCorrect = opts.findIndex(x => x.i === q.c);
+
+  return {
+    text: q.q,
+    answers: opts.map(x => x.text),
+    correctIndex: newCorrect
+  };
+}
+
+function buildTournamentQuestions(){
+
+  const easy = shuffle([...window.Q_EASY]).slice(0,30);
+  const med  = shuffle([...window.Q_MED]).slice(0,60);
+  const hard = shuffle([...window.Q_HARD]).slice(0,60);
+
+  const all = [...easy, ...med, ...hard];
+
+  shuffle(all);
+
+  return all.map(shuffleAnswers);
+
+}
