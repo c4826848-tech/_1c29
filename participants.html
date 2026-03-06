@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+<meta charset="UTF-8">
+<title>المشاركون</title>
+
+<link rel="stylesheet" href="style.css"/>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-database-compat.js"></script>
+
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>المشاركون في البطولة</h1>
+
+<div id="list"></div>
+
+</div>
+
+<script>
+
+const regRef = ref("contest_v1/registrations");
+
+regRef.on("value",snap=>{
+
+const data=snap.val();
+
+let html="";
+
+Object.values(data || {}).forEach(p=>{
+
+html+=`
+<div class="card">
+
+<h3>${p.name}</h3>
+
+<p>${p.phone}</p>
+
+<p>${p.team || ""}</p>
+
+</div>
+`;
+
+});
+
+document.getElementById("list").innerHTML=html;
+
+});
+
+</script>
+
+</body>
+</html>
